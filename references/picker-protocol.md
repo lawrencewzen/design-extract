@@ -57,10 +57,10 @@ window.PICKER_DATA = {
         {
           id: "palette-a",
           label: "暖纸蓝图",
-          note: "暖奶油底 + 靛蓝结构 + 古铜点缀",
+          note: "麻纸底 + 普鲁士蓝结构 + 标注红点缀",
           vars: {
-            "--paper": "#F9F3E5", "--ink": "#465670",
-            "--accent": "#BD7D36", "--structure": "#2B3358"
+            "--paper": "#F6F0E2", "--ink": "#35465E",
+            "--accent": "#C14B33", "--structure": "#1E3A5F"
           }
         }
         // … 2-4 个候选
@@ -71,9 +71,9 @@ window.PICKER_DATA = {
         {
           id: "paper-lightness", label: "底色明度", var: "--paper",
           options: [
-            { label: "更亮", value: "#FCF8EE" },
-            { label: "默认", value: "#F9F3E5", default: true },
-            { label: "更暗", value: "#F2EBDB" }
+            { label: "更亮", value: "#FBF7ED" },
+            { label: "默认", value: "#F6F0E2", default: true },
+            { label: "更暗", value: "#EDE5D1" }
           ]
         }
       ]
@@ -96,7 +96,7 @@ window.PICKER_DATA = {
     "palette": {
       "pick": "palette-a",
       "none": false,
-      "adjustments": { "--paper": "#FCF8EE" },
+      "adjustments": { "--paper": "#FBF7ED" },
       "feedback": "底色对了，点缀色想要更复古的红"
     },
     "typography": {
@@ -126,6 +126,8 @@ window.PICKER_DATA = {
 - 第1轮 palette none："太亮太互联网" → 候选红线：高饱和互联网蓝、纯白底
 - 第2轮 typography feedback："不要圆体" → 候选红线：圆体/可爱系字体
 ```
+
+红线纪律——**记原话，不泛化**。红线池记用户的原话和它具体所指："科技感深色炫光" ≠ "深色"（暖黑+烛光金不在被否定之列），"性冷淡黑白灰" ≠ "灰色系"。从否定推导候选范围时只许收窄、不许扩大；觉得需要泛化（"用户大概讨厌一切暗色底？"）必须回到对话用 AskUserQuestion 确认，确认前不得写进红线、不得用它过滤候选。访谈反向题的答案同样适用本条。
 
 ## 防呆
 
