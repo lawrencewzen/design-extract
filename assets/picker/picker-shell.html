@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>design-extract · 风格选择器</title>
+<!--
+  数据驱动的 picker 骨架：本文件不要按轮次修改，每轮只重写 picker-data.js。
+  约定：
+  - window.PICKER_DATA 见 references/picker-protocol.md
+  - preview.html 的根节点会被渲染进固定 480×360 的舞台（缩略图按比例缩小），
+    其中所有会随候选变化的视觉属性必须写成 var(--xxx)
+  - 已锁定区块需提供 lockedPick(展示用 label) 与 lockedVars(参与全局预览合成)
+  - UI 本身刻意中性灰，避免给用户的审美判断掺杂噪音
+-->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+         background: #ECECEC; color: #333; line-height: 1.6; }
+  header { background: #FFF; border-bottom: 1px solid #DDD; padding: 14px 28px;
+           position: sticky; top: 0; z-index: 10; display: flex; align-items: baseline; gap: 16px; }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header .progress { font-size: 13px; color: #888; }
+  .layout { display: grid; grid-template-columns: 1fr 540px; gap: 24px;
+            max-width: 1480px; margin: 0 auto; padding: 24px 28px 120px; }
+
+  /* —— 区块 —— */
+  .section { background: #FFF; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px;
+             border: 1px solid #E2E2E2; }
+  .section h2 { font-size: 15px; margin-bottom: 2px; }
+  .section .desc { font-size: 12.5px; color: #999; margin-bottom: 14px; }
+  .section.locked { opacity: 0.75; }
+  .locked-banner { display: flex; align-items: center; gap: 10px; font-size: 13px;
+                   background: #F0F7F0; border: 1px solid #CBE3CB; color: #3A7A3A;
+                   border-radius: 8px; padding: 8px 12px; }
+
+  /* —— 候选缩略图 —— */
+  .cands { display: flex; flex-wrap: wrap; gap: 14px; }
+  .cand { cursor: pointer; border: 2px solid #DDD; border-radius: 8px; overflow: hidden;
+          background: #FAFAFA; transition: border-color .15s, box-shadow .15s; width: 216px; }
+  .cand:hover { border-color: #AAA; }
+  .cand.selected { border-color: #2B6CB0; box-shadow: 0 0 0 3px rgba(43,108,176,.18); }
+  .cand .thumb { width: 216px; height: 162px; overflow: hidden; position: relative; background: #FFF; }
+  .cand .thumb .pv-fit { width: 480px; height: 360px; transform: scale(0.45); transform-origin: 0 0; }
+  .cand .meta { padding: 8px 10px; border-top: 1px solid #EEE; }
+  .cand .meta .label { font-size: 13px; font-weight: 600; }
+  .cand .meta .note { font-size: 11.5px; color: #999; }
+
+  /* —— 微调 —— */
+  .adjusters { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .adjuster { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+  .adjuster .name { color: #777; min-width: 64px; }
+  .chip { padding: 3px 12px; border-radius: 99px; border: 1px solid #CCC; background: #FFF;
+          font-size: 12px; cursor: pointer; }
+  .chip.on { background: #2B6CB0; border-color: #2B6CB0; color: #FFF; }
+
+  /* —— 反馈 / 都不是 —— */
+  .fb { margin-top: 14px; }
+  .fb textarea { width: 100%; min-height: 52px; border: 1px solid #DDD; border-radius: 6px;
+                 padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical; }
+  .fb textarea:focus { outline: none; border-color: #2B6CB0; }
+  .fb .hint { font-size: 11.5px; color: #AAA; margin-top: 2px; }
+  .none-row { margin-top: 10px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .none-row input { accent-color: #C0392B; }
+  .section.noned .cands, .section.noned .adjusters { opacity: 0.35; pointer-events: none; }
+  .err { color: #C0392B; font-size: 12.5px; margin-top: 6px; display: none; }
+  .section.invalid .err { display: block; }
+  .section.invalid { border-color: #E2A9A0; }
+
+  /* —— 实时预览 —— */
+  .preview-pane { position: sticky; top: 76px; align-self: start; }
+  .preview-pane .pv-card { background: #FFF; border: 1px solid #E2E2E2; border-radius: 10px;
+                           padding: 16px; }
+  .preview-pane h3 { font-size: 13px; color: #888; font-weight: 500; margin-bottom: 10px; }
+  .pv-stage { width: 480px; height: 360px; overflow: hidden; border-radius: 6px;
+              border: 1px solid #EEE; }
+  .pv-tip { font-size: 12px; color: #AAA; margin-top: 10px; }
+
+  /* —— 提交 —— */
+  .submit-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #FFF;
+                border-top: 1px solid #DDD; padding: 12px 28px; display: flex;
+                justify-content: center; gap: 16px; align-items: center; z-index: 20; }
+  .submit-bar button { background: #2B6CB0; color: #FFF; border: none; border-radius: 8px;
+                       padding: 10px 48px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .submit-bar button:hover { background: #235A94; }
+  .submit-bar .bar-err { color: #C0392B; font-size: 13px; }
+  .done-overlay { position: fixed; inset: 0; background: rgba(255,255,255,.96); z-index: 50;
+                  display: none; flex-direction: column; align-items: center; justify-content: center;
+                  gap: 12px; text-align: center; }
+  .done-overlay.show { display: flex; }
+  .done-overlay .big { font-size: 22px; font-weight: 700; }
+  .done-overlay .sub { color: #888; font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="hd-title">风格选择器</h1>
+  <span class="progress" id="hd-progress"></span>
+</header>
+
+<div class="layout">
+  <main id="sections"></main>
+  <aside class="preview-pane">
+    <div class="pv-card">
+      <h3>实时预览 · 当前组合</h3>
+      <div class="pv-stage" id="pv-main"></div>
+      <p class="pv-tip">每点选一个候选，预览立即按当前组合更新</p>
+    </div>
+  </aside>
+</div>
+
+<div class="submit-bar">
+  <span class="bar-err" id="bar-err"></span>
+  <button id="btn-submit">确认提交本轮选择</button>
+</div>
+
+<div class="done-overlay" id="done">
+  <div class="big">已提交 ✓</div>
+  <div class="sub">回到 Claude Code 继续，本页可以关掉了</div>
+</div>
+
+<script src="picker-data.js"></script>
+<script>
+(function () {
+  const D = window.PICKER_DATA;
+  if (!D) { document.body.innerHTML = "<p style='padding:40px'>缺少 picker-data.js</p>"; return; }
+
+  // 注入候选预览所需的样式（preview.css 全部用 var() 引用，候选间只差变量值）
+  const styleEl = document.createElement("style");
+  styleEl.textContent = D.preview.css || "";
+  document.head.appendChild(styleEl);
+
+  // —— 状态：{ sectionId: { pick, none, feedback, adjustments } } ——
+  const state = {};
+  D.sections.forEach((s) => {
+    if (!s.locked) state[s.id] = { pick: null, none: false, feedback: "", adjustments: {} };
+  });
+
+  const candById = (s, id) => s.candidates && s.candidates.find((c) => c.id === id);
+
+  // 合成全局变量：base + 各区块贡献（锁定区块用 lockedVars；未锁定用选中候选 + 微调）
+  // excludeId 用于候选缩略图——缩略图要体现"全局其余选择 + 本候选"的真实组合
+  function mergedVars(excludeId, extra) {
+    const vars = Object.assign({}, D.preview.baseVars || {});
+    D.sections.forEach((s) => {
+      if (s.id === excludeId) return;
+      if (s.locked) { Object.assign(vars, s.lockedVars || {}); return; }
+      const st = state[s.id];
+      if (st && st.pick && !st.none) {
+        const c = candById(s, st.pick);
+        if (c) Object.assign(vars, c.vars || {});
+        Object.assign(vars, st.adjustments);
+      }
+    });
+    if (extra) Object.assign(vars, extra);
+    return vars;
+  }
+  const varsToStyle = (vars) => Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(";");
+
+  // —— 渲染区块 ——
+  const root = document.getElementById("sections");
+  D.sections.forEach((s) => {
+    const el = document.createElement("section");
+    el.className = "section" + (s.locked ? " locked" : "");
+    el.dataset.id = s.id;
+    let inner = `<h2>${s.title}</h2><div class="desc">${s.desc || ""}</div>`;
+
+    if (s.locked) {
+      inner += `<div class="locked-banner">🔒 已锁定：${s.lockedPick || ""}（本轮不可改，如需推翻请在对话里说）</div>`;
+      el.innerHTML = inner;
+      root.appendChild(el);
+      return;
+    }
+
+    inner += `<div class="cands">` + s.candidates.map((c) => `
+      <div class="cand" data-cand="${c.id}">
+        <div class="thumb"><div class="pv-fit" data-thumb="${c.id}">${D.preview.html}</div></div>
+        <div class="meta"><div class="label">${c.label}</div><div class="note">${c.note || ""}</div></div>
+      </div>`).join("") + `</div>`;
+
+    if (s.adjusters && s.adjusters.length) {
+      inner += `<div class="adjusters">` + s.adjusters.map((a) => `
+        <div class="adjuster" data-adj="${a.id}">
+          <span class="name">${a.label}</span>
+          ${a.options.map((o) => `<button class="chip${o.default ? " on" : ""}"
+             data-var="${a.var}" data-value="${o.value}" data-default="${o.default ? 1 : 0}">${o.label}</button>`).join("")}
+        </div>`).join("") + `</div>`;
+    }
+
+    inner += `<div class="fb">
+        <textarea placeholder="以选中的为基础，但是…（有不满就写，留空 = 这个区块定稿锁定）"></textarea>
+        <div class="hint">写了反馈 → 下一轮基于你选的这版改；留空 → 锁定不再出现</div>
+      </div>`;
+    if (s.allowNone !== false) {
+      inner += `<label class="none-row"><input type="checkbox" class="none-ck" />
+        ✗ 都不是我想要的（请务必在上面写明原因，给下一轮换方向）</label>`;
+    }
+    inner += `<div class="err"></div>`;
+    el.innerHTML = inner;
+    root.appendChild(el);
+
+    // 事件：选候选
+    el.querySelectorAll(".cand").forEach((cEl) => {
+      cEl.addEventListener("click", () => {
+        state[s.id].pick = cEl.dataset.cand;
+        state[s.id].none = false;
+        const ck = el.querySelector(".none-ck"); if (ck) ck.checked = false;
+        el.classList.remove("noned", "invalid");
+        el.querySelectorAll(".cand").forEach((x) => x.classList.toggle("selected", x === cEl));
+        repaint();
+      });
+    });
+    // 事件：微调 chips
+    el.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const row = chip.closest(".adjuster");
+        row.querySelectorAll(".chip").forEach((x) => x.classList.toggle("on", x === chip));
+        if (chip.dataset.default === "1") delete state[s.id].adjustments[chip.dataset.var];
+        else state[s.id].adjustments[chip.dataset.var] = chip.dataset.value;
+        repaint();
+      });
+    });
+    // 事件：反馈 / 都不是
+    el.querySelector("textarea").addEventListener("input", (e) => {
+      state[s.id].feedback = e.target.value.trim();
+      el.classList.remove("invalid");
+    });
+    const ck = el.querySelector(".none-ck");
+    if (ck) ck.addEventListener("change", () => {
+      state[s.id].none = ck.checked;
+      if (ck.checked) { state[s.id].pick = null;
+        el.querySelectorAll(".cand").forEach((x) => x.classList.remove("selected")); }
+      el.classList.toggle("noned", ck.checked);
+      el.classList.remove("invalid");
+      repaint();
+    });
+  });
+
+  // —— 预览刷新：主预览 + 所有缩略图（缩略图也吃全局组合，保证"实景"）——
+  const pvMain = document.getElementById("pv-main");
+  pvMain.innerHTML = `<div class="pv-fit" style="width:480px;height:360px">${D.preview.html}</div>`;
+  function repaint() {
+    pvMain.firstElementChild.style.cssText = "width:480px;height:360px;" + varsToStyle(mergedVars(null));
+    D.sections.forEach((s) => {
+      if (s.locked) return;
+      s.candidates.forEach((c) => {
+        const t = document.querySelector(`[data-thumb="${c.id}"]`);
+        if (t) t.style.cssText = "width:480px;height:360px;transform:scale(0.45);transform-origin:0 0;" +
+          varsToStyle(mergedVars(s.id, c.vars));
+      });
+    });
+  }
+
+  // —— 头部进度 ——
+  const lockedCount = D.sections.filter((s) => s.locked).length;
+  document.getElementById("hd-title").textContent = D.title || "风格选择器";
+  document.getElementById("hd-progress").textContent =
+    `第 ${D.round || 1} 轮 · 已锁定 ${lockedCount}/${D.sections.length} 个区块`;
+
+  // —— 提交 ——
+  document.getElementById("btn-submit").addEventListener("click", async () => {
+    let firstBad = null;
+    D.sections.forEach((s) => {
+      if (s.locked) return;
+      const st = state[s.id];
+      const el = root.querySelector(`[data-id="${s.id}"]`);
+      const bad = st.none ? !st.feedback : !st.pick;
+      el.classList.toggle("invalid", bad);
+      if (bad) {
+        el.querySelector(".err").textContent = st.none
+          ? "勾了「都不是」就必须写原因——沉默的否定没法指导下一轮"
+          : "这个区块还没选：挑一个最接近的，或勾「都不是」并写原因";
+        if (!firstBad) firstBad = el;
+      }
+    });
+    if (firstBad) {
+      document.getElementById("bar-err").textContent = "还有区块未完成，已标红";
+      firstBad.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    const payload = { round: D.round || 1, sections: {} };
+    Object.entries(state).forEach(([id, st]) => {
+      payload.sections[id] = { pick: st.pick, none: st.none,
+        adjustments: st.adjustments, feedback: st.feedback };
+    });
+    try {
+      const r = await fetch("/submit", { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      document.getElementById("done").classList.add("show");
+    } catch (e) {
+      document.getElementById("bar-err").textContent = "提交失败：" + e.message + "（服务器还在吗？）";
+    }
+  });
+
+  repaint();
+})();
+</script>
+</body>
+</html>
