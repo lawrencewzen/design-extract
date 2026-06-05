@@ -301,9 +301,10 @@
       return;
     }
 
+    // thumbHtml：仅缩略图用的放大样片（字体/元件等微差异区块），主预览模板不受它影响
     inner += `<div class="cands">` + s.candidates.map((c) => `
       <div class="cand" data-cand="${c.id}">
-        <div class="thumb"><div class="pv-fit" data-thumb="${c.id}">${c.html || D.preview.html}</div></div>
+        <div class="thumb"><div class="pv-fit" data-thumb="${c.id}">${c.thumbHtml || c.html || D.preview.html}</div></div>
         <div class="meta"><div class="label">${c.label}</div><div class="note">${c.note || ""}</div></div>
       </div>`).join("") + `</div>`;
 
