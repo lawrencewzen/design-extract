@@ -10,6 +10,8 @@
   - window.PICKER_DATA 见 references/picker-protocol.md
   - preview.html 的根节点会被渲染进固定 480×360 的舞台（缩略图按比例缩小），
     其中所有会随候选变化的视觉属性必须写成 var(--xxx)
+  - 方向板轮：候选可自带 html/css 模板（css 须用唯一根类名命名空间）——
+    缩略图渲染候选自己的模板，选中后主预览整体切换到该模板
   - 已锁定区块需提供 lockedPick(展示用 label) 与 lockedVars(参与全局预览合成)
   - UI 本身刻意中性灰，避免给用户的审美判断掺杂噪音
 -->
@@ -125,9 +127,11 @@
   const D = window.PICKER_DATA;
   if (!D) { document.body.innerHTML = "<p style='padding:40px'>缺少 picker-data.js</p>"; return; }
 
-  // 注入候选预览所需的样式（preview.css 全部用 var() 引用，候选间只差变量值）
+  // 注入候选预览所需的样式：共享 preview.css + 各候选自带 css（方向板轮）。
+  // 自带 css 必须用唯一根类名命名空间，否则方向板之间互相污染
   const styleEl = document.createElement("style");
-  styleEl.textContent = D.preview.css || "";
+  styleEl.textContent = (D.preview.css || "") + "\n" +
+    D.sections.flatMap((s) => (s.candidates || []).map((c) => c.css || "")).join("\n");
   document.head.appendChild(styleEl);
 
   // —— 状态：{ sectionId: { pick, none, feedback, adjustments } } ——
@@ -174,7 +178,7 @@
 
     inner += `<div class="cands">` + s.candidates.map((c) => `
       <div class="cand" data-cand="${c.id}">
-        <div class="thumb"><div class="pv-fit" data-thumb="${c.id}">${D.preview.html}</div></div>
+        <div class="thumb"><div class="pv-fit" data-thumb="${c.id}">${c.html || D.preview.html}</div></div>
         <div class="meta"><div class="label">${c.label}</div><div class="note">${c.note || ""}</div></div>
       </div>`).join("") + `</div>`;
 
@@ -237,9 +241,27 @@
   });
 
   // —— 预览刷新：主预览 + 所有缩略图（缩略图也吃全局组合，保证"实景"）——
+  // 主预览模板：默认共享 preview.html；选中自带模板的候选（方向板）时整体切换
   const pvMain = document.getElementById("pv-main");
-  pvMain.innerHTML = `<div class="pv-fit" style="width:480px;height:360px">${D.preview.html}</div>`;
+  let mainTpl = null;
+  function currentTemplate() {
+    let html = D.preview.html;
+    D.sections.forEach((s) => {
+      if (s.locked) return;
+      const st = state[s.id];
+      if (st && st.pick && !st.none) {
+        const c = candById(s, st.pick);
+        if (c && c.html) html = c.html;
+      }
+    });
+    return html;
+  }
   function repaint() {
+    const tpl = currentTemplate();
+    if (tpl !== mainTpl) {
+      mainTpl = tpl;
+      pvMain.innerHTML = `<div class="pv-fit" style="width:480px;height:360px">${tpl}</div>`;
+    }
     pvMain.firstElementChild.style.cssText = "width:480px;height:360px;" + varsToStyle(mergedVars(null));
     D.sections.forEach((s) => {
       if (s.locked) return;
