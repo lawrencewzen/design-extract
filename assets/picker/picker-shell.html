@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>design-extract · 风格选择器</title>
 <!--
-  数据驱动的 picker 骨架：本文件不要按轮次修改，每轮只重写 picker-data.js。
+  数据驱动的 picker 外壳：本文件不要按轮次修改，每轮只重写 picker-data.js。
   约定：
   - window.PICKER_DATA 见 references/picker-protocol.md
+  - 区块类型 section.type："pick"（默认：单选 + 微调 + 反馈）/ "vote"（三态投票：
+    心动/无感/不要，速筛轮用）/ "text"（文本题：事实题用）/ "checklist"（勾选确认：
+    Do/Don't 用）——只有 pick 区块参与全局预览合成与锁定
   - preview.html 的根节点会被渲染进固定 480×360 的舞台（缩略图按比例缩小），
     其中所有会随候选变化的视觉属性必须写成 var(--xxx)
   - 方向板轮：候选可自带 html/css 模板（css 须用唯一根类名命名空间）——
@@ -25,6 +28,7 @@
   header .progress { font-size: 13px; color: #888; }
   .layout { display: grid; grid-template-columns: 1fr 540px; gap: 24px;
             max-width: 1480px; margin: 0 auto; padding: 24px 28px 120px; }
+  .layout.no-preview { grid-template-columns: 1fr; max-width: 1100px; }
 
   /* —— 区块 —— */
   .section { background: #FFF; border-radius: 10px; padding: 20px 24px; margin-bottom: 20px;
@@ -55,6 +59,30 @@
   .cand .meta { padding: 8px 10px; border-top: 1px solid #EEE; }
   .cand .meta .label { font-size: 13px; font-weight: 600; }
   .cand .meta .note { font-size: 11.5px; color: #999; }
+
+  /* —— 三态投票（vote 区块） —— */
+  .vote-row { display: flex; border-top: 1px solid #EEE; }
+  .vote-btn { flex: 1; padding: 6px 0; font-size: 12px; text-align: center; cursor: pointer;
+              background: #FAFAFA; border: none; border-right: 1px solid #EEE; color: #888; }
+  .vote-btn:last-child { border-right: none; }
+  .vote-btn.on-love { background: #2B6CB0; color: #FFF; }
+  .vote-btn.on-neutral { background: #E0E0E0; color: #555; }
+  .vote-btn.on-veto { background: #C0392B; color: #FFF; }
+  .cand.v-love { border-color: #2B6CB0; box-shadow: 0 0 0 3px rgba(43,108,176,.18); }
+  .cand.v-veto { border-color: #C0392B; opacity: .55; }
+
+  /* —— 文本题（text 区块） —— */
+  .q-text textarea { width: 100%; min-height: 64px; border: 1px solid #DDD; border-radius: 6px;
+                     padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical; }
+  .q-text textarea:focus { outline: none; border-color: #2B6CB0; }
+
+  /* —— 勾选确认（checklist 区块） —— */
+  .ckl { display: flex; flex-direction: column; gap: 8px; }
+  .ckl label { display: flex; gap: 8px; align-items: flex-start; font-size: 13px;
+               padding: 8px 10px; border: 1px solid #E2E2E2; border-radius: 6px;
+               background: #FAFAFA; cursor: pointer; }
+  .ckl label input { margin-top: 3px; accent-color: #2B6CB0; }
+  .ckl .src { display: block; font-size: 11.5px; color: #999; }
 
   /* —— 微调 —— */
   .adjusters { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -143,10 +171,17 @@
       .concat((s.lockedSample && s.lockedSample.css) || "")).join("\n");
   document.head.appendChild(styleEl);
 
-  // —— 状态：{ sectionId: { pick, none, feedback, adjustments } } ——
+  // —— 状态：按区块类型初始化 ——
   const state = {};
   D.sections.forEach((s) => {
-    if (!s.locked) state[s.id] = { pick: null, none: false, feedback: "", adjustments: {} };
+    if (s.locked) return;
+    const t = s.type || "pick";
+    if (t === "vote") state[s.id] = { type: t, feedback: "",
+      votes: Object.fromEntries((s.candidates || []).map((c) => [c.id, "neutral"])) };
+    else if (t === "text") state[s.id] = { type: t, answer: "" };
+    else if (t === "checklist") state[s.id] = { type: t, feedback: "",
+      checked: Object.fromEntries((s.items || []).map((i) => [i.id, i.checked !== false])) };
+    else state[s.id] = { type: "pick", pick: null, none: false, feedback: "", adjustments: {} };
   });
 
   const candById = (s, id) => s.candidates && s.candidates.find((c) => c.id === id);
@@ -158,6 +193,7 @@
     D.sections.forEach((s) => {
       if (s.id === excludeId) return;
       if (s.locked) { Object.assign(vars, s.lockedVars || {}); return; }
+      if (s.type && s.type !== "pick") return; // vote/text/checklist 不参与变量合成
       const st = state[s.id];
       if (st && st.pick && !st.none) {
         const c = candById(s, st.pick);
@@ -199,6 +235,72 @@
       return;
     }
 
+    const type = s.type || "pick";
+
+    // —— text：文本题（事实题用，required 默认 true） ——
+    if (type === "text") {
+      inner += `<div class="q-text"><textarea placeholder="${s.placeholder || ""}"></textarea></div>
+        <div class="err"></div>`;
+      el.innerHTML = inner;
+      root.appendChild(el);
+      el.querySelector("textarea").addEventListener("input", (e) => {
+        state[s.id].answer = e.target.value.trim();
+        el.classList.remove("invalid");
+      });
+      return;
+    }
+
+    // —— checklist：勾选确认（Do/Don't 用，items 默认全勾） ——
+    if (type === "checklist") {
+      inner += `<div class="ckl">` + (s.items || []).map((it) => `
+        <label><input type="checkbox" data-item="${it.id}" ${state[s.id].checked[it.id] ? "checked" : ""} />
+          <span>${it.label}${it.note ? `<span class="src">${it.note}</span>` : ""}</span></label>`).join("") + `</div>`;
+      if (s.feedback !== false) inner += `<div class="fb">
+        <textarea placeholder="${s.fbHint || "想补充新条目或修改措辞的，写在这里（可留空）"}"></textarea></div>`;
+      el.innerHTML = inner;
+      root.appendChild(el);
+      el.querySelectorAll("input[type=checkbox]").forEach((ck) =>
+        ck.addEventListener("change", () => { state[s.id].checked[ck.dataset.item] = ck.checked; }));
+      const cklFb = el.querySelector(".fb textarea");
+      if (cklFb) cklFb.addEventListener("input", (e) => { state[s.id].feedback = e.target.value.trim(); });
+      return;
+    }
+
+    // —— vote：三态投票（速筛轮用，候选自带模板，不参与全局合成） ——
+    if (type === "vote") {
+      inner += `<div class="cands">` + s.candidates.map((c) => `
+        <div class="cand" data-cand="${c.id}">
+          <div class="thumb"><div class="pv-fit" data-thumb="${c.id}">${c.html || D.preview.html}</div></div>
+          <div class="meta"><div class="label">${c.label}</div><div class="note">${c.note || ""}</div></div>
+          <div class="vote-row">
+            <button class="vote-btn" data-v="love">♥ 心动</button>
+            <button class="vote-btn on-neutral" data-v="neutral">– 无感</button>
+            <button class="vote-btn" data-v="veto">✗ 不要</button>
+          </div>
+        </div>`).join("") + `</div>`;
+      if (s.feedback !== false) inner += `<div class="fb">
+        <textarea placeholder="${s.fbHint || "排除的原因、心动卡里更偏向谁……写给下一轮（可留空）"}"></textarea>
+        <div class="hint">投票定方向，文字补细节</div></div>`;
+      inner += `<div class="err"></div>`;
+      el.innerHTML = inner;
+      root.appendChild(el);
+      el.querySelectorAll(".cand").forEach((cEl) => {
+        const cid = cEl.dataset.cand;
+        cEl.querySelectorAll(".vote-btn").forEach((b) => b.addEventListener("click", () => {
+          state[s.id].votes[cid] = b.dataset.v;
+          el.classList.remove("invalid");
+          cEl.classList.toggle("v-love", b.dataset.v === "love");
+          cEl.classList.toggle("v-veto", b.dataset.v === "veto");
+          cEl.querySelectorAll(".vote-btn").forEach((x) => {
+            x.className = "vote-btn" + (x === b ? " on-" + b.dataset.v : "");
+          });
+        }));
+      });
+      const voteFb = el.querySelector(".fb textarea");
+      if (voteFb) voteFb.addEventListener("input", (e) => { state[s.id].feedback = e.target.value.trim(); });
+      return;
+    }
+
     inner += `<div class="cands">` + s.candidates.map((c) => `
       <div class="cand" data-cand="${c.id}">
         <div class="thumb"><div class="pv-fit" data-thumb="${c.id}">${c.html || D.preview.html}</div></div>
@@ -220,7 +322,7 @@
       </div>`;
     if (s.allowNone !== false) {
       inner += `<label class="none-row"><input type="checkbox" class="none-ck" />
-        ✗ 都不是我想要的（请务必在上面写明原因，给下一轮换方向）</label>`;
+        ${s.noneLabel || "✗ 都不是我想要的（请务必在上面写明原因，给下一轮换方向）"}</label>`;
     }
     inner += `<div class="err"></div>`;
     el.innerHTML = inner;
@@ -271,6 +373,7 @@
     let html = D.preview.html;
     D.sections.forEach((s) => {
       if (s.locked) return;
+      if (s.type && s.type !== "pick") return;
       const st = state[s.id];
       if (st && st.pick && !st.none) {
         const c = candById(s, st.pick);
@@ -289,7 +392,7 @@
     document.querySelectorAll(".lk-sample").forEach((el) => { el.style.cssText = varsToStyle(mergedVars(null)); });
     D.sections.forEach((s) => {
       if (s.locked) return;
-      s.candidates.forEach((c) => {
+      (s.candidates || []).forEach((c) => {
         const t = document.querySelector(`[data-thumb="${c.id}"]`);
         if (t) t.style.cssText = "width:480px;height:360px;transform:scale(0.45);transform-origin:0 0;" +
           varsToStyle(mergedVars(s.id, c.vars));
@@ -297,11 +400,19 @@
     });
   }
 
-  // —— 头部进度 ——
-  const lockedCount = D.sections.filter((s) => s.locked).length;
+  // —— 头部进度（只统计 pick 区块——其余类型无锁定概念） ——
+  const pickSecs = D.sections.filter((s) => !s.type || s.type === "pick");
+  const lockedCount = pickSecs.filter((s) => s.locked).length;
   document.getElementById("hd-title").textContent = D.title || "风格选择器";
-  document.getElementById("hd-progress").textContent =
-    `第 ${D.round || 1} 轮 · 已锁定 ${lockedCount}/${D.sections.length} 个区块`;
+  document.getElementById("hd-progress").textContent = pickSecs.length
+    ? `第 ${D.round ?? 1} 轮 · 已锁定 ${lockedCount}/${pickSecs.length} 个区块`
+    : `第 ${D.round ?? 1} 轮`;
+
+  // —— 无预览模式（速筛轮等无全局组合可言的轮次） ——
+  if (D.preview.hidden) {
+    document.querySelector(".preview-pane").style.display = "none";
+    document.querySelector(".layout").classList.add("no-preview");
+  }
 
   // —— 提交 ——
   document.getElementById("btn-submit").addEventListener("click", async () => {
@@ -310,12 +421,24 @@
       if (s.locked) return;
       const st = state[s.id];
       const el = root.querySelector(`[data-id="${s.id}"]`);
-      const bad = st.none ? !st.feedback : !st.pick;
-      el.classList.toggle("invalid", bad);
-      if (bad) {
-        el.querySelector(".err").textContent = st.none
+      const t = s.type || "pick";
+      let bad = false, msg = "";
+      if (t === "pick") {
+        bad = st.none ? (s.noneNeedsReason !== false && !st.feedback) : !st.pick;
+        msg = st.none
           ? "勾了「都不是」就必须写原因——沉默的否定没法指导下一轮"
           : "这个区块还没选：挑一个最接近的，或勾「都不是」并写原因";
+      } else if (t === "text") {
+        bad = s.required !== false && !st.answer;
+        msg = "这一题需要填写";
+      } else if (t === "vote") {
+        bad = s.requireVote !== false &&
+          !Object.values(st.votes).some((v) => v !== "neutral");
+        msg = "全部无感没法定向——至少投出一些「♥ 心动」或「✗ 不要」";
+      } // checklist 无必填项
+      el.classList.toggle("invalid", bad);
+      if (bad) {
+        el.querySelector(".err").textContent = msg;
         if (!firstBad) firstBad = el;
       }
     });
@@ -324,10 +447,20 @@
       firstBad.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    const payload = { round: D.round || 1, sections: {} };
+    const payload = { round: D.round ?? 1, sections: {} };
     Object.entries(state).forEach(([id, st]) => {
-      payload.sections[id] = { pick: st.pick, none: st.none,
-        adjustments: st.adjustments, feedback: st.feedback };
+      if (st.type === "vote")
+        payload.sections[id] = { type: "vote", votes: st.votes, feedback: st.feedback };
+      else if (st.type === "text")
+        payload.sections[id] = { type: "text", answer: st.answer };
+      else if (st.type === "checklist")
+        payload.sections[id] = { type: "checklist",
+          checked: Object.keys(st.checked).filter((k) => st.checked[k]),
+          unchecked: Object.keys(st.checked).filter((k) => !st.checked[k]),
+          feedback: st.feedback };
+      else
+        payload.sections[id] = { type: "pick", pick: st.pick, none: st.none,
+          adjustments: st.adjustments, feedback: st.feedback };
     });
     try {
       const r = await fetch("/submit", { method: "POST",
