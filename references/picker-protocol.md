@@ -58,7 +58,7 @@ window.PICKER_DATA = {
       title: "色板",
       desc: "底色 + 文字 + 结构 + 点缀的整体关系",
       locked: false,          // true = 已锁定，只展示定稿不可改
-      lockedPick: null,       // 锁定时显示的定稿名（如 "暖纸蓝图 + 底色更亮"）
+      lockedPick: null,       // 锁定时显示的定稿名（如 "羊皮暖底 + 底色更亮"）
       lockedVars: null,       // 锁定时的最终变量值（pick.vars + adjustments 合并），
                               // 仍参与全局预览合成，让用户看到完整组合；
                               // shell 会把其中的色值/字体渲染成定稿样片芯片，必须给真实值
@@ -69,11 +69,11 @@ window.PICKER_DATA = {
       candidates: [
         {
           id: "palette-a",
-          label: "暖纸蓝图",
-          note: "麻纸底 + 普鲁士蓝结构 + 标注红点缀",
+          label: "羊皮暖底",
+          note: "羊皮纸底 + 墨绿文字 + 烫金点缀",
           vars: {
-            "--paper": "#F6F0E2", "--ink": "#35465E",
-            "--accent": "#C14B33", "--structure": "#1E3A5F"
+            "--paper": "#F3EDE0", "--ink": "#2C3A2F",
+            "--accent": "#8C6F3E", "--structure": "#6E4F3A"
           }
         }
         // … 2-4 个候选
@@ -84,9 +84,9 @@ window.PICKER_DATA = {
         {
           id: "paper-lightness", label: "底色明度", var: "--paper",
           options: [
-            { label: "更亮", value: "#FBF7ED" },
-            { label: "默认", value: "#F6F0E2", default: true },
-            { label: "更暗", value: "#EDE5D1" }
+            { label: "更亮", value: "#F9F4EA" },
+            { label: "默认", value: "#F3EDE0", default: true },
+            { label: "更暗", value: "#E9E1CE" }
           ]
         }
       ]
@@ -134,7 +134,7 @@ shell 行为：候选带 `html` 时，缩略图渲染它自己的模板（不再
     "palette": {
       "pick": "palette-a",
       "none": false,
-      "adjustments": { "--paper": "#FBF7ED" },
+      "adjustments": { "--paper": "#F9F4EA" },
       "feedback": "底色对了，点缀色想要更复古的红"
     },
     "typography": {
