@@ -31,10 +31,18 @@
              border: 1px solid #E2E2E2; }
   .section h2 { font-size: 15px; margin-bottom: 2px; }
   .section .desc { font-size: 12.5px; color: #999; margin-bottom: 14px; }
-  .section.locked { opacity: 0.75; }
+  /* 锁定区块不做整体置灰——里面有定稿色样/小样，透明度会冲淡颜色，样片必须忠实 */
   .locked-banner { display: flex; align-items: center; gap: 10px; font-size: 13px;
                    background: #F0F7F0; border: 1px solid #CBE3CB; color: #3A7A3A;
                    border-radius: 8px; padding: 8px 12px; }
+  .lk-chips { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .lk-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: #555;
+             background: #FAFAFA; border: 1px solid #E2E2E2; border-radius: 6px; padding: 4px 10px;
+             font-family: "SF Mono", Menlo, monospace; }
+  .lk-chip i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,.15);
+               display: inline-block; }
+  .lk-chip em { font-style: normal; font-size: 15px; color: #333; }
+  .lk-sample { margin-top: 10px; }
 
   /* —— 候选缩略图 —— */
   .cands { display: flex; flex-wrap: wrap; gap: 14px; }
@@ -118,7 +126,7 @@
 
 <div class="done-overlay" id="done">
   <div class="big">已提交 ✓</div>
-  <div class="sub">回到 Claude Code 继续，本页可以关掉了</div>
+  <div class="sub">回到 Claude Code 继续；如有下一轮，刷新本页即可</div>
 </div>
 
 <script src="picker-data.js"></script>
@@ -127,11 +135,12 @@
   const D = window.PICKER_DATA;
   if (!D) { document.body.innerHTML = "<p style='padding:40px'>缺少 picker-data.js</p>"; return; }
 
-  // 注入候选预览所需的样式：共享 preview.css + 各候选自带 css（方向板轮）。
-  // 自带 css 必须用唯一根类名命名空间，否则方向板之间互相污染
+  // 注入候选预览所需的样式：共享 preview.css + 各候选自带 css（方向板轮）
+  // + 已锁定区块的定稿小样 css（lockedSample）。自带 css 必须用唯一根类名命名空间
   const styleEl = document.createElement("style");
   styleEl.textContent = (D.preview.css || "") + "\n" +
-    D.sections.flatMap((s) => (s.candidates || []).map((c) => c.css || "")).join("\n");
+    D.sections.flatMap((s) => (s.candidates || []).map((c) => c.css || "")
+      .concat((s.lockedSample && s.lockedSample.css) || "")).join("\n");
   document.head.appendChild(styleEl);
 
   // —— 状态：{ sectionId: { pick, none, feedback, adjustments } } ——
@@ -171,6 +180,20 @@
 
     if (s.locked) {
       inner += `<div class="locked-banner">🔒 已锁定：${s.lockedPick || ""}（本轮不可改，如需推翻请在对话里说）</div>`;
+      // 定稿内容直接展示：lockedVars 里的色值渲染成色块芯片、字体渲染成实字样，
+      // 其余值（display/边框等）靠 lockedPick 文字描述
+      const chips = Object.entries(s.lockedVars || {}).map(([k, v]) => {
+        const val = String(v).trim();
+        if (/^#[0-9A-Fa-f]{3,8}$/.test(val))
+          return `<span class="lk-chip"><i style="background:${val}"></i>${k.replace(/^--/, "")} ${val}</span>`;
+        if (k.startsWith("--font-"))
+          return `<span class="lk-chip"><em style="font-family:${val}">Ag 永</em>${val.split(",")[0].replace(/['"]/g, "")}</span>`;
+        return "";
+      }).join("");
+      if (chips) inner += `<div class="lk-chips">${chips}</div>`;
+      // 非色值/字体的定稿（质感/元件/形状）用 lockedSample 小样展示，
+      // 小样内可用 var()——repaint 会把全局合成变量注入样片容器
+      if (s.lockedSample) inner += `<div class="lk-sample">${s.lockedSample.html}</div>`;
       el.innerHTML = inner;
       root.appendChild(el);
       return;
@@ -263,6 +286,7 @@
       pvMain.innerHTML = `<div class="pv-fit" style="width:480px;height:360px">${tpl}</div>`;
     }
     pvMain.firstElementChild.style.cssText = "width:480px;height:360px;" + varsToStyle(mergedVars(null));
+    document.querySelectorAll(".lk-sample").forEach((el) => { el.style.cssText = varsToStyle(mergedVars(null)); });
     D.sections.forEach((s) => {
       if (s.locked) return;
       s.candidates.forEach((c) => {

@@ -60,7 +60,11 @@ window.PICKER_DATA = {
       locked: false,          // true = 已锁定，只展示定稿不可改
       lockedPick: null,       // 锁定时显示的定稿名（如 "暖纸蓝图 + 底色更亮"）
       lockedVars: null,       // 锁定时的最终变量值（pick.vars + adjustments 合并），
-                              // 仍参与全局预览合成，让用户看到完整组合
+                              // 仍参与全局预览合成，让用户看到完整组合；
+                              // shell 会把其中的色值/字体渲染成定稿样片芯片，必须给真实值
+      lockedSample: null,     // 可选 {html, css}：质感/元件/形状这类非色值定稿的小样
+                              // （纹理瓷砖/真元件/样例卡）。css 须命名空间；
+                              // html 内可用 var()——shell 会把全局合成变量注入样片容器
       allowNone: true,        // 显示"✗ 都不是我想要的"
       candidates: [
         {
