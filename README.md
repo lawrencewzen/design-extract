@@ -119,4 +119,5 @@ references/
 assets/picker/
   server.mjs                      # 本地服务器
   picker-shell.html               # 选择器页面外壳（数据驱动）
+  archetype-cards.js              # 16 张预制标准速筛卡（速筛轮题目，随 skill 分发）
 ```
