@@ -1,27 +1,32 @@
-# design-extract
+<div align="center">
 
-![Agent Skill](https://img.shields.io/badge/Agent%20Skill-SKILL.md-4c8eda)
-![Agents](https://img.shields.io/badge/agents-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20opencode%20%C2%B7%20pi-7b5cd6)
-![Platform](https://img.shields.io/badge/platform-macOS%20%C2%B7%20Linux%20%C2%B7%20Windows-2ea44f)
-![Node](https://img.shields.io/badge/Node.js-%E2%89%A5%2018-339933?logo=nodedotjs&logoColor=white)
-![Zero npm deps](https://img.shields.io/badge/npm%20deps-0-lightgrey)
-![License: MIT](https://img.shields.io/badge/license-MIT-yellow)
+# 🎨 design-extract
 
-一个通用 **Agent Skill**：把零散的视觉偏好提炼成**个人品牌设计系统**。兼容 [Claude Code](https://claude.com/claude-code)、[Codex](https://developers.openai.com/codex/skills)、[opencode](https://opencode.ai/docs/skills/)、[pi](https://github.com/badlogic/pi-mono) 等所有支持 `SKILL.md` 标准的编码 agent。
+**把零散的视觉偏好，提炼成可执行的个人品牌设计系统**
+
+![Agent Skill](https://img.shields.io/badge/Agent%20Skill-SKILL.md-4c8eda) ![Agents](https://img.shields.io/badge/agents-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20opencode%20%C2%B7%20pi-7b5cd6) ![Platform](https://img.shields.io/badge/platform-macOS%20%C2%B7%20Linux%20%C2%B7%20Windows-2ea44f) ![Node](https://img.shields.io/badge/Node.js-%E2%89%A5%2018-339933?logo=nodedotjs&logoColor=white) ![Zero npm deps](https://img.shields.io/badge/npm%20deps-0-lightgrey) ![License: MIT](https://img.shields.io/badge/license-MIT-yellow)
+
+</div>
+
+一个通用 **Agent Skill**——兼容 [Claude Code](https://claude.com/claude-code)、[Codex](https://developers.openai.com/codex/skills)、[opencode](https://opencode.ai/docs/skills/)、[pi](https://github.com/badlogic/pi-mono) 等所有支持 `SKILL.md` 标准的编码 agent。
 
 你给它旧封面、喜欢的参考、甚至什么都不给——它通过浏览器里的交互式点选循环，最终交付一份人读的品牌规范（`design.md`）、一份机器可执行的 CSS 主题（`theme.css`）和一页定稿展示（`preview.html`），让你后续所有内容工具（幻灯片、封面图、视频动画）从同一个视觉源头取值。
 
+<div align="center">
+
 ![内置 16 个风格原型速筛卡](docs/archetypes.png)
 
-*零素材冷启动的 16 张风格原型速筛卡——气质不问，用眼睛投：在浏览器里凭直觉投"心动 / 无感 / 不要"。*
+*零素材冷启动的 16 张风格原型速筛卡——气质不问，用眼睛投：❤️ 心动 / 😐 无感 / ❌ 不要*
 
-## 解决什么问题
+</div>
+
+## 🎯 解决什么问题
 
 内容创作者的视觉风格通常散落在感觉里："我喜欢那种米白的、有点书卷气的……"。这种描述既没法复用，也没法交给工具执行。每做一张封面、一页幻灯片都要重新"凭感觉对齐"，产出忽冷忽暖。
 
 design-extract 把这个感觉**钉死成精确的 token**：`#F3EDE0` 而不是"米白"、`Cormorant Garamond × Noto Serif SC` 而不是"优雅的衬线"。钉死之后，品牌一致性就从"靠记忆"变成"靠引用"。
 
-## 最终产出
+## 📦 最终产出
 
 | 文件 | 给谁用 | 内容 |
 |------|--------|------|
@@ -42,7 +47,7 @@ design-extract 把这个感觉**钉死成精确的 token**：`#F3EDE0` 而不是
 
 （picker 临时目录里的最后一轮页面是过程预览，可选保留；正式的定稿展示以 preview.html 为准。）
 
-## 它怎么工作
+## ⚙️ 它怎么工作
 
 ```
 ① 模式判定 → ② 速筛轮(浏览器·原型卡三态投票+事实题) → ③ 方向板轮(整板单选，锁定版式语法)
@@ -69,7 +74,7 @@ design-extract 把这个感觉**钉死成精确的 token**：`#F3EDE0` 而不是
 
 提交后 agent 读取你的选择：满意的区块**锁定**不再出现，不满意的按反馈重做，循环三五轮收敛。**问答也全程在浏览器、全部给可见物**：开场不填文字问卷——16 张风格原型卡渲染成实景小样，凭直觉投"心动/无感/不要"（颗粒度到原型级，排除票自动记入红线）；收尾的调性描述、体系命名（wordmark 卡）、Do/Don't 红线也都渲染成贴着定稿预览的卡片让你挑、勾——每个候选标注来源，你不需要会表达，只需要会说"不对"。
 
-## 内置内容
+## 🧰 内置内容
 
 **16 个风格原型 · 6 个气质族**（`references/style-archetypes.md`，零素材冷启动的基底，每个含完整色板 hex / 字体配对 / 质感 / 标志元件 / 红线种子）：
 
@@ -84,7 +89,7 @@ design-extract 把这个感觉**钉死成精确的 token**：`#F3EDE0` 而不是
 
 原型只是第一轮候选的起点，循环微调后才是个人化结果。每个原型自带**版式签名**（构图语法 + 明度结构 + 密度），是方向板轮的结构层；细节轮的色板/字体/质感/元件/形状五个区块（样式层）是**独立轴**，内置《混搭规则》强制候选跨原型取材（"印刷的票据框 + 粉彩的色板"），并附配方示例与冲突警告——个性来自组合，不来自单选。
 
-## 边界
+## 🚧 边界
 
 本 skill 只做一件事：**提取视觉语言**。判断标准：能落进 design.md / theme.css 的视觉成分才在范围内。明确不做：内容策略（文案语气/标题句式）、版式模板库（具体页面布局是消费方引擎的事，这里只提取版式语法规则）、logo/头像设计、动画编排。提需求或贡献功能前先过这道边界。
 
@@ -95,7 +100,7 @@ design-extract 把这个感觉**钉死成精确的 token**：`#F3EDE0` 而不是
 - `assets/picker/picker-shell.html` — 数据驱动的选择器页面（每轮只换数据不换壳）
 - `assets/picker/server.mjs` — 零依赖本地服务器（静态托管 + 接收提交落盘 choices.json）
 
-## 安装
+## 📥 安装
 
 ```bash
 git clone https://github.com/lawrencewzen/design-extract.git
@@ -120,7 +125,7 @@ cd design-extract
 
 依赖：Node.js ≥ 18（picker 本地服务器），零 npm 依赖。
 
-## 使用
+## 🚀 使用
 
 在你的 agent（Claude Code / Codex / opencode / pi …）里直接说（无需记命令）：
 
@@ -130,7 +135,7 @@ cd design-extract
 
 之后跟着流程走：浏览器自动打开 → 速筛页写两句事实、给原型卡投票 → 方向板/细节轮点选、微调、反馈 → 提交、重复至收敛 → 收尾轮确认暗色变体/调性/命名/红线 → 拿到 `design.md` + `theme.css` + `preview.html`（自动在浏览器打开终验）。
 
-## 仓库结构
+## 🗂️ 仓库结构
 
 ```
 SKILL.md                          # 主指令：三模式 + 流程编排
@@ -148,6 +153,6 @@ docs/
   archetypes.png                  # README 配图：16 张速筛卡实景
 ```
 
-## License
+## 📄 License
 
 [MIT](LICENSE)
