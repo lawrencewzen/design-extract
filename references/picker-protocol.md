@@ -46,12 +46,14 @@ design-extract-picker/
 # 1. 起服务器（必须 run_in_background，它会一直阻塞）
 node <skill目录>/assets/picker/server.mjs --dir design-extract-picker --port 4399
 
-# 2. 打开浏览器
+# 2. 打开浏览器（macOS open / Linux xdg-open / Windows start）
 open http://localhost:4399
 
 # 3. 后台等提交（until-loop 轮询文件出现）
 until [ -f design-extract-picker/choices.json ]; do sleep 2; done; echo SUBMITTED
 ```
+
+Windows（PowerShell）第 3 步等价：`while (-not (Test-Path design-extract-picker/choices.json)) { Start-Sleep 2 }; echo SUBMITTED`
 
 第 3 步也放后台跑，结束时收到通知再读 `choices.json`。**每轮开始前删掉上一轮的 choices.json**，否则等待会立即假完成。
 

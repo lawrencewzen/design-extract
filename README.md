@@ -1,6 +1,12 @@
 # design-extract
 
-一个 [Claude Code](https://claude.com/claude-code) skill：把零散的视觉偏好提炼成**个人品牌设计系统**。
+![Agent Skill](https://img.shields.io/badge/Agent%20Skill-SKILL.md-4c8eda)
+![Agents](https://img.shields.io/badge/agents-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20opencode%20%C2%B7%20pi-7b5cd6)
+![Platform](https://img.shields.io/badge/platform-macOS%20%C2%B7%20Linux%20%C2%B7%20Windows-2ea44f)
+![Node](https://img.shields.io/badge/Node.js-%E2%89%A5%2018-339933?logo=nodedotjs&logoColor=white)
+![Zero npm deps](https://img.shields.io/badge/npm%20deps-0-lightgrey)
+
+一个通用 **Agent Skill**：把零散的视觉偏好提炼成**个人品牌设计系统**。兼容 [Claude Code](https://claude.com/claude-code)、[Codex](https://developers.openai.com/codex/skills)、[opencode](https://opencode.ai/docs/skills/)、[pi](https://github.com/badlogic/pi-mono) 等所有支持 `SKILL.md` 标准的编码 agent。
 
 你给它旧封面、喜欢的参考、甚至什么都不给——它通过浏览器里的交互式点选循环，最终交付一份人读的品牌规范（`design.md`）、一份机器可执行的 CSS 主题（`theme.css`）和一页定稿展示（`preview.html`），让你后续所有内容工具（幻灯片、封面图、视频动画）从同一个视觉源头取值。
 
@@ -60,7 +66,7 @@ design-extract 把这个感觉**钉死成精确的 token**：`#F3EDE0` 而不是
 - **写反馈**："以这个为基础，但点缀色想要更复古的红"
 - **否决**："✗ 都不是" + 必填原因（原因会自动记入 Do/Don't 红线）
 
-提交后 Claude 读取你的选择：满意的区块**锁定**不再出现，不满意的按反馈重做，循环三五轮收敛。**问答也全程在浏览器、全部给可见物**：开场不填文字问卷——16 张风格原型卡渲染成实景小样，凭直觉投"心动/无感/不要"（颗粒度到原型级，排除票自动记入红线）；收尾的调性描述、体系命名（wordmark 卡）、Do/Don't 红线也都渲染成贴着定稿预览的卡片让你挑、勾——每个候选标注来源，你不需要会表达，只需要会说"不对"。
+提交后 agent 读取你的选择：满意的区块**锁定**不再出现，不满意的按反馈重做，循环三五轮收敛。**问答也全程在浏览器、全部给可见物**：开场不填文字问卷——16 张风格原型卡渲染成实景小样，凭直觉投"心动/无感/不要"（颗粒度到原型级，排除票自动记入红线）；收尾的调性描述、体系命名（wordmark 卡）、Do/Don't 红线也都渲染成贴着定稿预览的卡片让你挑、勾——每个候选标注来源，你不需要会表达，只需要会说"不对"。
 
 ## 内置内容
 
@@ -94,17 +100,28 @@ design-extract 把这个感觉**钉死成精确的 token**：`#F3EDE0` 而不是
 git clone https://github.com/lawrencewzen/design-extract.git
 cd design-extract
 
-./install.sh                    # 全局安装（所有项目可用）
-./install.sh /path/to/project   # 或：项目级安装
+# macOS / Linux / Windows(Git Bash)
+./install.sh                      # Claude Code → ~/.claude/skills/（opencode 也读这个目录，装一次两边生效）
+./install.sh --agent codex        # Codex    → ~/.codex/skills/
+./install.sh --agent opencode     # opencode → ~/.config/opencode/skills/
+./install.sh --agent pi           # pi       → ~/.pi/agent/skills/
+./install.sh --agent agents       # 跨 agent 通用目录 → ~/.agents/skills/
+./install.sh --dir <skills目录>    # 其他任意 agent
+./install.sh /path/to/project     # 项目级安装（项目内目录按 --agent 决定）
 ```
 
-安装方式是**软链接**——仓库 `git pull` 更新后所有项目立即生效，无需重装。卸载：`./install.sh --uninstall [项目路径]`。
+```powershell
+# Windows（原生 PowerShell）
+.\install.ps1                     # 参数同上：-Agent / -Dir / -Project / -Uninstall
+```
+
+安装方式是**链接**（macOS/Linux 软链接，Windows junction，均无需管理员权限）——仓库 `git pull` 更新后所有 agent 立即生效，无需重装。卸载：`./install.sh --uninstall`（带相同定位参数）。
 
 依赖：Node.js ≥ 18（picker 本地服务器），零 npm 依赖。
 
 ## 使用
 
-在 Claude Code 里直接说（无需记命令）：
+在你的 agent（Claude Code / Codex / opencode / pi …）里直接说（无需记命令）：
 
 - "帮我提取我的品牌设计，素材在 `./covers/` 下" → 素材提取模式
 - "从这几个我喜欢的网站提取一套设计语言：……" → 参考借鉴模式
@@ -116,7 +133,8 @@ cd design-extract
 
 ```
 SKILL.md                          # 主指令：三模式 + 流程编排
-install.sh                        # 统一安装/卸载脚本
+install.sh                        # 安装/卸载（macOS / Linux / Git Bash，多 agent 目录预设）
+install.ps1                       # 安装/卸载（Windows PowerShell，junction 方式）
 references/
   design-md-template.md           # 产出模板 + 翻译规则
   style-archetypes.md             # 16 个风格原型库（6 气质族 + 混搭规则）
