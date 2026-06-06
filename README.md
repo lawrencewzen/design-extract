@@ -5,6 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-macOS%20%C2%B7%20Linux%20%C2%B7%20Windows-2ea44f)
 ![Node](https://img.shields.io/badge/Node.js-%E2%89%A5%2018-339933?logo=nodedotjs&logoColor=white)
 ![Zero npm deps](https://img.shields.io/badge/npm%20deps-0-lightgrey)
+![License: MIT](https://img.shields.io/badge/license-MIT-yellow)
 
 一个通用 **Agent Skill**：把零散的视觉偏好提炼成**个人品牌设计系统**。兼容 [Claude Code](https://claude.com/claude-code)、[Codex](https://developers.openai.com/codex/skills)、[opencode](https://opencode.ai/docs/skills/)、[pi](https://github.com/badlogic/pi-mono) 等所有支持 `SKILL.md` 标准的编码 agent。
 
@@ -146,3 +147,7 @@ assets/picker/
 docs/
   archetypes.png                  # README 配图：16 张速筛卡实景
 ```
+
+## License
+
+[MIT](LICENSE)
